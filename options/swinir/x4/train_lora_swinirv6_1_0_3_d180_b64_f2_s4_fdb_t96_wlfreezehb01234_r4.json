@@ -1,0 +1,91 @@
+{
+  "task": "lora_swinirv6_1_0_3_d180_b64_f2_s4_fdb_t96_wlfreezehb01234_r4"     // real-world image sr. root/task/images-models-options
+  , "model": "Plain2" // "plain" | "plain2" if two inputs
+  , "gpu_ids": [6]
+  , "dist": true
+
+  , "scale": 4       // broadcast to "datasets"
+  , "n_channels": 3  // broadcast to "datasets", 1 for grayscale, 3 for color
+  , "freeze_layers": ["conv_first","residual_group.blocks.[0-4]","layers.[0-5].conv"]
+  , "unfreeze_layers": ["lora_"]
+  , "path": {
+    "root": "superresolution"            // "denoising" | "superresolution" | "dejpeg"
+    , "pretrained_netG": "./model_zoo/swinir/001_classicalSR_DIV2K_s48w8_SwinIR-M_x2_init_path.pth"      // path of pretrained model
+    , "pretrained_netE": null      // path of pretrained model
+  }
+
+  , "datasets": {
+    "train": {
+      "name": "train_dataset"           // just name
+      , "dataset_type": "SR"         // "dncnn" | "dnpatch" | "fdncnn" | "ffdnet" | "sr" | "srmd" | "dpsr" | "plain" | "plainpatch" | "jpeg"
+      , "dataroot_H": "../../RealSR/train_HR/x4" // path of H training dataset. DIV2K (800 training images) + Flickr2K (2650 images) + + OST (10324 images)
+      , "dataroot_L": "../../RealSR/train_LR/x4"            // path of L training dataset
+
+      , "degradation_type": "bsrgan"    // "bsrgan" | "bsrgan_plus"
+      , "H_size": 384                   // patch_size 256 | 288 | 320
+      , "shuffle_prob": 0.1             //
+      , "lq_patchsize": 96
+      , "use_sharp": true
+
+      , "dataloader_shuffle": true
+      , "dataloader_num_workers": 6
+      , "dataloader_batch_size": 4     // batch size 1 | 16 | 32 | 48 | 64 | 128. Total batch size =4x8=32 in SwinIR
+    }
+    , "test": {
+      "name": "test_dataset"            // just name
+      , "degradation_type": "sr"
+      , "dataset_type": "SR"         // "dncnn" | "dnpatch" | "fdncnn" | "ffdnet" | "sr" | "srmd" | "dpsr" | "plain" | "plainpatch" | "jpeg"
+      , "dataroot_H": "../../RealSR/test_HR/x4"  // path of H testing dataset
+      , "dataroot_L": "../../RealSR/test_LR/x4"              // path of L testing dataset
+    }
+
+  }
+
+  , "netG": {
+    "net_type": "SwinIRv6_1_0_3"
+    , "upscale": 2
+    , "scale": 4
+    , "rank": 4
+    , "in_chans": 3
+    , "gb_feat": 64
+    , "img_size": 96
+    , "window_size": 8
+    , "img_range": 1.0
+    , "lora_layers": [0,1,2,3,4,5]
+    , "use_lora_block": [0,1,2,3,4]
+    , "depths": [6, 6, 6, 6, 6, 6]
+    , "embed_dim": 180
+    , "num_heads": [6, 6, 6, 6, 6, 6]
+    , "mlp_ratio": 2
+    , "upsampler": "pixelshuffle"        // "pixelshuffle" | "pixelshuffledirect" | "nearest+conv" | null
+    , "resi_connection": "1conv"        // "1conv" | "3conv"
+    , "init_type": "default"
+  }
+
+  , "train": {
+      "G_lossfn_type": ["nn.L1Loss","FreqLoss"]             // "l1" preferred | "l2sum" | "l2" | "ssim" | "charbonnier"
+    , "G_lossfn_weight": [1,10]            // default
+
+    , "E_decay": 0                 // Exponential Moving Average for netG: set 0 to disable; default setting 0.999
+
+    , "G_optimizer_type": "adam"        // fixed, adam is enough
+    , "G_optimizer_lr": 2e-4            // learning rate
+    , "G_optimizer_wd": 0               // weight decay, default 0
+    , "G_optimizer_clipgrad": null      // unused
+    , "G_optimizer_reuse": true         //
+
+    , "G_scheduler_type": "MultiStepLR" // "MultiStepLR" is enough
+    , "G_scheduler_milestones": [20000, 40000, 60000]
+    , "G_scheduler_gamma": 0.5
+
+    , "G_regularizer_orthstep": null    // unused
+    , "G_regularizer_clipstep": null    // unused
+
+    , "G_param_strict": false
+    , "E_param_strict": false
+
+    , "checkpoint_test": 2000        // for testing
+    , "checkpoint_save": 2000           // for saving model
+    , "checkpoint_print": 200           // for print
+  }
+}
